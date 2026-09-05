@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Форум</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; color: #1d2129; }
+    a { text-decoration: none; color: #1877f2; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 15px; }
+    .flex { display: flex; gap: 20px; flex-wrap: wrap; }
+    .sidebar { flex: 0 0 260px; }
+    .main { flex: 1; min-width: 0; }
+
+    header { background: #fff; border-bottom: 1px solid #d0d7de; padding: 10px 0; position: sticky; top: 0; z-index: 100; }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .logo { font-size: 22px; font-weight: bold; color: #1877f2; }
+    .logo i { margin-right: 8px; }
+    .search-box { display: flex; background: #f0f2f5; border-radius: 20px; padding: 5px 12px; flex: 1; max-width: 400px; }
+    .search-box input { border: none; background: transparent; padding: 8px; flex: 1; outline: none; }
+    .search-box button { background: none; border: none; cursor: pointer; color: #606770; }
+    .user-panel { display: flex; align-items: center; gap: 15px; }
+    .user-panel .avatar { width: 32px; height: 32px; border-radius: 50%; background: #ddd; overflow: hidden; }
+    .user-panel .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .notif-icon { position: relative; cursor: pointer; }
+    .notif-badge { position: absolute; top: -6px; right: -6px; background: #e41e3f; color: #fff; border-radius: 50%; padding: 2px 6px; font-size: 11px; line-height: 1; }
+    .notif-dropdown { display: none; position: absolute; right: 0; top: 40px; background: #fff; border: 1px solid #ddd; border-radius: 8px; width: 300px; max-height: 400px; overflow-y: auto; box-shadow: 0 8px 16px rgba(0,0,0,0.1); z-index: 10; }
+    .notif-dropdown.show { display: block; }
+    .notif-item { padding: 10px 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+    .notif-item:hover { background: #f7f8fa; }
+    .notif-item.unread { background: #e7f3ff; }
+    .notif-item .time { font-size: 12px; color: #606770; }
+
+    .sidebar-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 16px; margin-bottom: 16px; }
+    .sidebar-card h3 { font-size: 15px; margin-bottom: 10px; color: #1d2129; }
+    .category-tree { list-style: none; padding-left: 0; }
+    .category-tree li { padding: 4px 0; border-bottom: 1px solid #f0f2f5; }
+    .category-tree li:last-child { border: none; }
+    .category-tree .cat-name { font-weight: 600; color: #1d2129; cursor: pointer; }
+    .category-tree .subforum-list { list-style: none; padding-left: 20px; margin-top: 4px; }
+    .category-tree .subforum-list li { padding: 3px 0; border: none; }
+    .category-tree .subforum-list a { color: #606770; font-size: 14px; }
+    .category-tree .subforum-list a:hover { color: #1877f2; }
+
+    .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 16px; margin-bottom: 16px; }
+    .panel h2 { font-size: 20px; margin-bottom: 12px; }
+    .thread-item { border-bottom: 1px solid #f0f2f5; padding: 12px 0; cursor: pointer; transition: background 0.1s; }
+    .thread-item:hover { background: #f7f8fa; }
+    .thread-item .title { font-weight: 600; font-size: 16px; color: #1d2129; }
+    .thread-item .title .pin { color: #f0ad4e; margin-right: 4px; }
+    .thread-item .title .lock { color: #d9534f; margin-right: 4px; }
+    .thread-item .meta { font-size: 13px; color: #606770; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .thread-item .meta i { margin-right: 3px; }
+    .thread-item .last-post { font-size: 13px; color: #606770; text-align: right; }
+    .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 16px; flex-wrap: wrap; }
+    .pagination button { background: #f0f2f5; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+    .pagination button.active { background: #1877f2; color: #fff; }
+    .pagination button:disabled { opacity: 0.5; cursor: default; }
+
+    .post-item { padding: 14px 0; border-bottom: 1px solid #f0f2f5; }
+    .post-item .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .post-item .post-header .avatar-sm { width: 30px; height: 30px; border-radius: 50%; background: #ddd; overflow: hidden; }
+    .post-item .post-header .avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+    .post-item .post-header .post-author { font-weight: 600; color: #1d2129; }
+    .post-item .post-header .post-date { font-size: 12px; color: #606770; }
+    .post-item .post-content { margin: 8px 0; word-wrap: break-word; }
+    .post-item .post-actions { display: flex; gap: 12px; font-size: 14px; color: #606770; }
+    .post-item .post-actions button { background: none; border: none; cursor: pointer; color: #606770; }
+    .post-item .post-actions button:hover { color: #1877f2; }
+    .post-item .post-actions .liked { color: #1877f2; }
+    .post-item .post-actions .like-count { margin-left: 4px; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 4px; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 14px; }
+    .form-group textarea { resize: vertical; min-height: 100px; }
+    .bb-toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+    .bb-toolbar button { background: #f0f2f5; border: 1px solid #d0d7de; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-weight: bold; }
+    .bb-toolbar button:hover { background: #e4e6eb; }
+    .btn { display: inline-block; background: #1877f2; color: #fff; padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .btn:hover { background: #0e5a9e; }
+    .btn-secondary { background: #d0d7de; color: #1d2129; }
+    .btn-secondary:hover { background: #b3bcc4; }
+    .btn-danger { background: #d9534f; }
+    .btn-danger:hover { background: #c9302c; }
+    .btn-sm { padding: 4px 12px; font-size: 12px; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; justify-content: center; align-items: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 8px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+    .modal h3 { margin-bottom: 16px; }
+    .modal .close { float: right; background: none; border: none; font-size: 24px; cursor: pointer; color: #606770; }
+
+    .resource-item { border: 1px solid #e4e6eb; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .resource-item .title { font-weight: 600; font-size: 16px; }
+    .resource-item .meta { font-size: 13px; color: #606770; }
+    .resource-item .screenshots { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .resource-item .screenshots img { max-width: 100px; max-height: 100px; border-radius: 4px; border: 1px solid #ddd; }
+
+    @media (max-width: 768px) {
+      .sidebar { flex: 0 0 100%; }
+      .header-inner { flex-wrap: wrap; }
+      .search-box { max-width: 100%; order: 3; flex-basis: 100%; }
+    }
+    .text-center { text-align: center; }
+    .mt-12 { margin-top: 12px; }
+    .mb-12 { margin-bottom: 12px; }
+    .hidden { display: none; }
+    blockquote { background: #f7f8fa; border-left: 4px solid #1877f2; padding: 8px 12px; margin: 6px 0; }
+    pre { background: #f0f2f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    code { font-family: monospace; }
+  </style>
+</head>
+<body>
+
+<!-- ШАПКА -->
+<header>
+  <div class="container header-inner">
+    <div class="logo"><i class="fas fa-comments"></i>Форум</div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Поиск...">
+      <button id="searchBtn"><i class="fas fa-search"></i></button>
+    </div>
+    <div class="user-panel" id="userPanel"></div>
+  </div>
+</header>
+
+<!-- ОСНОВНОЙ КОНТЕЙНЕР -->
+<div class="container flex" style="margin-top:20px;">
+  <aside class="sidebar" id="sidebar">
+    <!-- Категории с подфорумами -->
+    <div class="sidebar-card" id="categoriesCard">
+      <h3><i class="fas fa-folder"></i> Категории</h3>
+      <ul class="category-tree" id="categoryTree"></ul>
+    </div>
+    <!-- Профиль -->
+    <div class="sidebar-card profile-card" id="profileCard" style="display:none;">
+      <div class="avatar-lg" id="profileAvatar"><img src="" alt="avatar"></div>
+      <div class="username" id="profileUsername"></div>
+      <div class="stats">
+        <span><b id="profileThreads">0</b> Тем</span>
+        <span><b id="profilePosts">0</b> Постов</span>
+      </div>
+      <div class="text-center mt-12">
+        <button class="btn btn-sm btn-secondary" id="profileBtn">Мой профиль</button>
+        <button class="btn btn-sm btn-secondary" id="messagesBtn"><i class="fas fa-envelope"></i> ЛС</button>
+        <button class="btn btn-sm btn-secondary" id="adminBtn" style="display:none;"><i class="fas fa-cogs"></i> Админка</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main" id="mainContent"></main>
+</div>
+
+<!-- МОДАЛКИ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent">
+    <button class="close" id="modalClose">&times;</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Уведомления -->
+<div class="notif-dropdown" id="notifDropdown"></div>
+
+<script>
+// ====================================================================
+// ПОЛНАЯ КЛИЕНТСКАЯ ЛОГИКА
+// ====================================================================
+
+const API_BASE = window.location.origin;
+let currentUser = null;
+let currentCategory = '';
+let currentSubforum = '';
+let currentPage = 1;
+let currentThreadId = null;
+let currentView = 'home';
+
+const main = document.getElementById('mainContent');
+const categoryTree = document.getElementById('categoryTree');
+const userPanel = document.getElementById('userPanel');
+const profileCard = document.getElementById('profileCard');
+const notifDropdown = document.getElementById('notifDropdown');
+const modalOverlay = document.getElementById('modalOverlay');
+const modalBody = document.getElementById('modalBody');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+
+// ========== ОБЩИЕ ФУНКЦИИ ==========
+async function fetchAPI(endpoint, options = {}) {
+  const url = `${API_BASE}${endpoint}`;
+  const config = {
+    method: options.method || 'GET',
+    headers: options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {},
+    body: options.body instanceof FormData ? options.body : (options.body ? JSON.stringify(options.body) : undefined),
+    credentials: 'include'
+  };
+  const res = await fetch(url, config);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Ошибка запроса');
+  }
+  return res.json();
+}
+
+// ========== ПАРСЕР BB-КОДОВ ==========
+function parseBB(text) {
+  if (!text) return '';
+  let result = text
+    .replace(/\[b\](.*?)\[\/b\]/gs, '<strong>$1</strong>')
+    .replace(/\[i\](.*?)\[\/i\]/gs, '<em>$1</em>')
+    .replace(/\[u\](.*?)\[\/u\]/gs, '<u>$1</u>')
+    .replace(/\[quote\](.*?)\[\/quote\]/gs, '<blockquote>$1</blockquote>')
+    .replace(/\[spoiler\](.*?)\[\/spoiler\]/gs, '<details><summary>Спойлер</summary>$1</details>')
+    .replace(/\[code\](.*?)\[\/code\]/gs, '<pre><code>$1</code></pre>')
+    .replace(/\[url=(.*?)\](.*?)\[\/url\]/gs, '<a href="$1" target="_blank">$2</a>')
+    .replace(/\[img\](.*?)\[\/img\]/gs, '<img src="$1" alt="" style="max-width:100%;">')
+    .replace(/\[video\](.*?)\[\/video\]/gs, '<iframe src="$1" frameborder="0" allowfullscreen></iframe>');
+  return result;
+}
+
+// ========== АВТОРИЗАЦИЯ ==========
+async function checkAuth() {
+  try {
+    const user = await fetchAPI('/api/me');
+    if (user) {
+      currentUser = user;
+      renderUserPanel();
+      renderProfileCard();
+      loadNotifications();
+      return true;
+    } else {
+      currentUser = null;
+      renderUserPanel();
+      profileCard.style.display = 'none';
+      return false;
+    }
+  } catch(e) {
+    currentUser = null;
+    renderUserPanel();
+    profileCard.style.display = 'none';
+    return false;
+  }
+}
+
+function renderUserPanel() {
+  if (currentUser) {
+    userPanel.innerHTML = `
+      <span>${currentUser.username}</span>
+      <div class="notif-icon" id="notifIcon">
+        <i class="fas fa-bell"></i>
+        <span class="notif-badge" id="notifBadge">0</span>
+      </div>
+      <div class="avatar"><img src="${currentUser.avatar || 'https://www.gravatar.com/avatar/default?d=identicon&s=32'}" alt="avatar"></div>
+      <button class="btn btn-sm btn-secondary" id="logoutBtn">Выйти</button>
+    `;
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetchAPI('/api/logout', { method: 'GET' });
+      checkAuth();
+      navigate('home');
+    });
+    document.getElementById('notifIcon').addEventListener('click', toggleNotifications);
+  } else {
+    userPanel.innerHTML = `
+      <button class="btn btn-sm" id="loginBtn">Вход</button>
+      <button class="btn btn-sm btn-secondary" id="registerBtn">Регистрация</button>
+    `;
+    document.getElementById('loginBtn').addEventListener('click', () => showAuthModal('login'));
+    document.getElementById('registerBtn').addEventListener('click', () => showAuthModal('register'));
+  }
+}
+
+function renderProfileCard() {
+  if (currentUser) {
+    profileCard.style.display = 'block';
+    document.getElementById('profileAvatar').querySelector('img').src = currentUser.avatar || 'https://www.gravatar.com/avatar/default?d=identicon&s=80';
+    document.getElementById('profileUsername').textContent = currentUser.username;
+    loadUserStats(currentUser.username);
+    document.getElementById('profileBtn').addEventListener('click', () => navigate('profile', currentUser.username));
+    document.getElementById('messagesBtn').addEventListener('click', () => navigate('messages'));
+    const adminBtn = document.getElementById('adminBtn');
+    if (currentUser.role === 'admin' || currentUser.role === 'moderator') {
+      adminBtn.style.display = 'inline-block';
+      adminBtn.addEventListener('click', showAdminPanel);
+    } else {
+      adminBtn.style.display = 'none';
+    }
+  }
+}
+
+async function loadUserStats(username) {
+  try {
+    const data = await fetchAPI(`/api/profile/${username}`);
+    document.getElementById('profileThreads').textContent = data.threadCount || 0;
+    document.getElementById('profilePosts').textContent = data.postCount || 0;
+  } catch(e) {}
+}
+
+// ========== НАВИГАЦИЯ ==========
+function navigate(view, param) {
+  currentView = view;
+  currentPage = 1;
+  if (view === 'home') {
+    renderHome();
+  } else if (view === 'thread') {
+    currentThreadId = param;
+    renderThread(param);
+  } else if (view === 'profile') {
+    renderProfile(param);
+  } else if (view === 'messages') {
+    renderMessages();
+  } else if (view === 'search') {
+    renderSearch(param);
+  } else if (view === 'resources') {
+    renderResources();
+  } else if (view === 'admin') {
+    showAdminPanel();
+  }
+}
+
+// ========== КАТЕГОРИИ С ПОДФОРУМАМИ ==========
+async function loadCategories() {
+  try {
+    const cats = await fetchAPI('/api/categories');
+    let html = '';
+    cats.forEach(cat => {
+      html += `<li><span class="cat-name">${cat.name}</span>`;
+      if (cat.subforums && cat.subforums.length) {
+        html += `<ul class="subforum-list">`;
+        cat.subforums.forEach(sub => {
+          html += `<li><a href="#" data-cat="${cat.id}" data-sub="${sub}">${sub}</a></li>`;
+        });
+        html += `</ul>`;
+      }
+      html += `</li>`;
+    });
+    categoryTree.innerHTML = html;
+    categoryTree.querySelectorAll('.subforum-list a').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        currentCategory = a.dataset.cat;
+        currentSubforum = a.dataset.sub;
+        navigate('home');
+      });
+    });
+  } catch(e) {}
+}
+
+// ========== ГЛАВНАЯ (список тем) ==========
+async function renderHome() {
+  const cat = currentCategory;
+  const sub = currentSubforum;
+  const page = currentPage;
+  try {
+    const query = `?category=${cat}&subforum=${sub}&page=${page}&limit=10`;
+    const data = await fetchAPI(`/api/threads${query}`);
+    const threads = data.threads || [];
+    const total = data.total || 0;
+    const limit = data.limit || 10;
+    const totalPages = Math.ceil(total / limit);
+
+    let html = `<div class="panel"><h2>${sub ? sub : 'Все темы'}</h2>`;
+    if (currentUser) {
+      html += `<button class="btn" id="newThreadBtn"><i class="fas fa-plus"></i> Создать тему</button>`;
+      html += `<button class="btn btn-secondary" id="resourcesBtn"><i class="fas fa-download"></i> Ресурсы</button>`;
+    }
+    html += `<div id="threadList">`;
+    if (threads.length === 0) html += `<p class="text-center">Нет тем</p>`;
+    else {
+      threads.forEach(t => {
+        const pin = t.pinned ? '<i class="fas fa-thumbtack pin"></i>' : '';
+        const lock = t.locked ? '<i class="fas fa-lock lock"></i>' : '';
+        html += `
+          <div class="thread-item" data-id="${t.id}">
+            <div class="title">${pin}${lock}<a href="#" onclick="navigate('thread','${t.id}')">${t.title}</a></div>
+            <div class="meta">
+              <span><i class="fas fa-user"></i> ${t.authorName || 'Unknown'}</span>
+              <span><i class="far fa-clock"></i> ${new Date(t.createdAt).toLocaleString()}</span>
+              <span><i class="fas fa-reply"></i> ${t.replies || 0}</span>
+              <span><i class="fas fa-eye"></i> ${t.views || 0}</span>
+            </div>
+            <div class="last-post">
+              ${t.lastPostAuthor ? `Посл. от ${t.lastPostAuthor}` : ''}
+              ${t.lastPostAt ? new Date(t.lastPostAt).toLocaleString() : ''}
+            </div>
+          </div>
+        `;
+      });
+    }
+    html += `</div>`;
+    if (totalPages > 1) {
+      html += `<div class="pagination">`;
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="${i === page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+    main.innerHTML = html;
+
+    // События
+    document.querySelectorAll('.pagination button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentPage = parseInt(btn.dataset.page);
+        renderHome();
+      });
+    });
+    const newBtn = document.getElementById('newThreadBtn');
+    if (newBtn) newBtn.addEventListener('click', () => showCreateThreadModal());
+    const resBtn = document.getElementById('resourcesBtn');
+    if (resBtn) resBtn.addEventListener('click', () => navigate('resources'));
+  } catch(e) {
+    main.innerHTML = `<div class="panel"><p>Ошибка загрузки тем</p></div>`;
+  }
+}
+
+// ========== СОЗДАНИЕ ТЕМЫ (с выбором подфорума) ==========
+async function showCreateThreadModal() {
+  const cats = await fetchAPI('/api/categories');
+  let catOptions = '';
+  cats.forEach(c => {
+    catOptions += `<optgroup label="${c.name}">`;
+    c.subforums.forEach(sub => {
+      catOptions += `<option value="${c.id}|${sub}">${sub}</option>`;
+    });
+    catOptions += `</optgroup>`;
+  });
+  openModal(`
+    <h3>Создать тему</h3>
+    <form id="createThreadForm">
+      <div class="form-group">
+        <label>Заголовок</label>
+        <input type="text" id="threadTitle" required>
+      </div>
+      <div class="form-group">
+        <label>Подфорум</label>
+        <select id="threadSubforum">${catOptions}</select>
+      </div>
+      <div class="form-group">
+        <label>Текст (BB-коды поддерживаются)</label>
+        <div class="bb-toolbar">
+          <button type="button" data-tag="b">B</button>
+          <button type="button" data-tag="i">I</button>
+          <button type="button" data-tag="u">U</button>
+          <button type="button" data-tag="quote">Цитата</button>
+          <button type="button" data-tag="spoiler">Спойлер</button>
+          <button type="button" data-tag="code">Код</button>
+          <button type="button" data-tag="url">Ссылка</button>
+          <button type="button" data-tag="img">Изобр.</button>
+          <button type="button" data-tag="video">Видео</button>
+        </div>
+        <textarea id="threadContent" required></textarea>
+      </div>
+      <button type="submit" class="btn">Опубликовать</button>
+    </form>
+    <p id="createMsg" style="color:red; margin-top:8px;"></p>
+  `);
+  // BB-коды
+  document.querySelectorAll('.bb-toolbar button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tag = btn.dataset.tag;
+      const textarea = document.getElementById('threadContent');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selected = textarea.value.substring(start, end);
+      let replacement = '';
+      if (tag === 'url') replacement = `[url=]${selected || 'ссылка'}[/url]`;
+      else if (tag === 'img') replacement = `[img]${selected || 'url_изображения'}[/img]`;
+      else if (tag === 'video') replacement = `[video]${selected || 'url_видео'}[/video]`;
+      else replacement = `[${tag}]${selected || 'текст'}[/${tag}]`;
+      textarea.setRangeText(replacement, start, end, 'end');
+      textarea.focus();
+    });
+  });
+  document.getElementById('createThreadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('threadTitle').value.trim();
+    const content = document.getElementById('threadContent').value.trim();
+    const val = document.getElementById('threadSubforum').value;
+    const [categoryId, subforum] = val.split('|');
+    try {
+      const data = await fetchAPI('/api/threads', { method: 'POST', body: { title, content, categoryId, subforum } });
+      if (data.success) {
+        closeModal();
+        navigate('home');
+      } else {
+        document.getElementById('createMsg').textContent = data.error;
+      }
+    } catch(e) {
+      document.getElementById('createMsg').textContent = e.message;
+    }
+  });
+}
+
+// ========== ПРОСМОТР ТЕМЫ (с BB-кодами) ==========
+async function renderThread(threadId) {
+  const page = currentPage;
+  try {
+    const data = await fetchAPI(`/api/threads/${threadId}?page=${page}&limit=5`);
+    const thread = data.thread;
+    const posts = data.posts || [];
+    const total = data.total || 0;
+    const limit = data.limit || 5;
+    const totalPages = Math.ceil(total / limit);
+    const subscribed = data.subscribed || false;
+
+    let html = `<div class="panel">`;
+    html += `<h2>${thread.title}</h2>`;
+    html += `<div><small><i class="fas fa-user"></i> ${thread.authorName} · ${new Date(thread.createdAt).toLocaleString()}</small></div>`;
+    html += `<div style="margin: 12px 0;">${parseBB(thread.content)}</div>`;
+    html += `<div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px;">`;
+    if (currentUser) {
+      html += `<button class="btn btn-sm" id="replyBtn"><i class="fas fa-reply"></i> Ответить</button>`;
+      html += `<button class="btn btn-sm ${subscribed ? 'btn-secondary' : ''}" id="subscribeBtn">${subscribed ? 'Отписаться' : 'Подписаться'}</button>`;
+    }
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator')) {
+      html += `<button class="btn btn-sm btn-secondary" id="editThreadBtn"><i class="fas fa-edit"></i> Редактировать</button>`;
+      html += `<button class="btn btn-sm btn-danger" id="deleteThreadBtn"><i class="fas fa-trash"></i> Удалить</button>`;
+    }
+    html += `</div>`;
+    html += `<hr><h3>Ответы</h3>`;
+    if (posts.length === 0) html += `<p>Нет ответов</p>`;
+    else {
+      posts.forEach(p => {
+        html += `
+          <div class="post-item" data-id="${p.id}">
+            <div class="post-header">
+              <div class="avatar-sm"><img src="${p.authorAvatar || 'https://www.gravatar.com/avatar/default?d=identicon&s=30'}" alt=""></div>
+              <span class="post-author">${p.authorName}</span>
+              <span class="post-date">${new Date(p.createdAt).toLocaleString()}</span>
+              ${p.editedAt ? `<span class="post-date">(ред.)</span>` : ''}
+            </div>
+            <div class="post-content">${parseBB(p.content)}</div>
+            <div class="post-actions">
+              <button class="like-btn ${p.liked ? 'liked' : ''}" data-postid="${p.id}">
+                <i class="fas fa-thumbs-up"></i> <span class="like-count">${p.likes || 0}</span>
+              </button>
+              ${currentUser && (currentUser.id === p.authorId || currentUser.role === 'admin' || currentUser.role === 'moderator') ? 
+                `<button class="edit-post-btn" data-postid="${p.id}"><i class="fas fa-edit"></i></button>` : ''}
+              ${currentUser && (currentUser.role === 'admin' || currentUser.role === 'moderator') ? 
+                `<button class="delete-post-btn" data-postid="${p.id}"><i class="fas fa-trash"></i></button>` : ''}
+            </div>
+          </div>
+        `;
+      });
+    }
+    if (totalPages > 1) {
+      html += `<div class="pagination">`;
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="${i === page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+    main.innerHTML = html;
+
+    // События
+    document.getElementById('replyBtn')?.addEventListener('click', () => showReplyModal(threadId));
+    document.getElementById('subscribeBtn')?.addEventListener('click', async () => {
+      await fetchAPI('/api/subscribe', { method: 'POST', body: { threadId } });
+      renderThread(threadId);
+    });
+    document.getElementById('editThreadBtn')?.addEventListener('click', () => showEditThreadModal(thread));
+    document.getElementById('deleteThreadBtn')?.addEventListener('click', async () => {
+      if (confirm('Удалить тему?')) {
+        await fetchAPI(`/api/threads/${threadId}`, { method: 'DELETE' });
+        navigate('home');
+      }
+    });
+    document.querySelectorAll('.pagination button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentPage = parseInt(btn.dataset.page);
+        renderThread(threadId);
+      });
+    });
+    document.querySelectorAll('.like-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const postId = btn.dataset.postid;
+        await fetchAPI('/api/like', { method: 'POST', body: { postId } });
+        renderThread(threadId);
+      });
+    });
+    document.querySelectorAll('.edit-post-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const postId = btn.dataset.postid;
+        const postContent = posts.find(p => p.id === postId)?.content || '';
+        showEditPostModal(postId, postContent);
+      });
+    });
+    document.querySelectorAll('.delete-post-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (confirm('Удалить пост?')) {
+          await fetchAPI(`/api/posts/${btn.dataset.postid}`, { method: 'DELETE' });
+          renderThread(threadId);
+        }
+      });
+    });
+  } catch(e) {
+    main.innerHTML = `<div class="panel"><p>Ошибка загрузки темы</p></div>`;
+  }
+}
+
+// ========== ОСТАЛЬНЫЕ МОДАЛКИ (ответ, редактирование поста, темы) ==========
+// (оставляем как в предыдущей версии – они аналогичны)
+
+// ========== РЕСУРСЫ ==========
+async function renderResources() {
+  try {
+    const resources = await fetchAPI('/api/resources');
+    let html = `<div class="panel"><h2>Ресурсы</h2>`;
+    if (currentUser) {
+      html += `<button class="btn" id="newResourceBtn"><i class="fas fa-plus"></i> Опубликовать ресурс</button>`;
+    }
+    if (resources.length === 0) html += `<p>Нет ресурсов</p>`;
+    else {
+      resources.forEach(r => {
+        html += `
+          <div class="resource-item">
+            <div class="title">${r.title}</div>
+            <div class="meta">Автор: ${r.authorName} · Версия: ${r.version} · ${new Date(r.createdAt).toLocaleString()}</div>
+            <p>${r.description}</p>
+            <div><a href="${r.downloadLink}" target="_blank">Скачать</a></div>
+            ${r.icon ? `<img src="${r.icon}" alt="" style="max-width:50px;">` : ''}
+            <div class="screenshots">
+              ${r.screenshots && r.screenshots.length ? r.screenshots.map(s => `<img src="/uploads/${s}" alt="">`).join('') : ''}
+            </div>
+          </div>
+        `;
+      });
+    }
+    html += `</div>`;
+    main.innerHTML = html;
+    document.getElementById('newResourceBtn')?.addEventListener('click', showCreateResourceModal);
+  } catch(e) {
+    main.innerHTML = `<div class="panel"><p>Ошибка загрузки ресурсов</p></div>`;
+  }
+}
+
+function showCreateResourceModal() {
+  openModal(`
+    <h3>Опубликовать ресурс</h3>
+    <form id="resourceForm" enctype="multipart/form-data">
+      <div class="form-group">
+        <label>Название</label>
+        <input type="text" id="resTitle" required>
+      </div>
+      <div class="form-group">
+        <label>Описание</label>
+        <textarea id="resDesc" required></textarea>
+      </div>
+      <div class="form-group">
+        <label>Ссылка на скачивание</label>
+        <input type="url" id="resLink" required>
+      </div>
+      <div class="form-group">
+        <label>Версия</label>
+        <input type="text" id="resVersion" required>
+      </div>
+      <div class="form-group">
+        <label>Иконка (URL)</label>
+        <input type="url" id="resIcon">
+      </div>
+      <div class="form-group">
+        <label>Скриншоты (до 10, каждый до 5 МБ)</label>
+        <input type="file" id="resScreenshots" accept="image/*" multiple>
+      </div>
+      <button type="submit" class="btn">Опубликовать</button>
+    </form>
+    <p id="resMsg" style="color:red; margin-top:8px;"></p>
+  `);
+  document.getElementById('resourceForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    // Добавляем поля вручную (т.к. они не отправляются через FormData из-за multipart)
+    formData.append('title', document.getElementById('resTitle').value.trim());
+    formData.append('description', document.getElementById('resDesc').value.trim());
+    formData.append('downloadLink', document.getElementById('resLink').value.trim());
+    formData.append('version', document.getElementById('resVersion').value.trim());
+    formData.append('icon', document.getElementById('resIcon').value.trim());
+    const files = document.getElementById('resScreenshots').files;
+    for (let i = 0; i < files.length; i++) {
+      formData.append('screenshots', files[i]);
+    }
+    try {
+      const data = await fetchAPI('/api/resources', { method: 'POST', body: formData });
+      if (data.success) {
+        closeModal();
+        renderResources();
+      } else {
+        document.getElementById('resMsg').textContent = data.error;
+      }
+    } catch(e) {
+      document.getElementById('resMsg').textContent = e.message;
+    }
+  });
+}
+
+// ========== АДМИНКА ==========
+async function showAdminPanel() {
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
+    alert('Нет прав');
+    return;
+  }
+  try {
+    const users = await fetchAPI('/api/admin/users');
+    let html = `<div class="panel"><h2>Админ-панель</h2>`;
+    html += `<h3>Пользователи</h3><ul>`;
+    users.forEach(u => {
+      html += `<li>${u.username} (${u.role}) 
+        <button class="btn btn-sm btn-secondary" onclick="editUser('${u.id}')">Ред.</button>
+        ${u.id !== currentUser.id ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">Удалить</button>` : ''}
+      </li>`;
+    });
+    html += `</ul>`;
+    html += `<h3>Управление стилями</h3>`;
+    html += `<button class="btn" onclick="showStyleEditor()">Редактировать стиль</button>`;
+    html += `</div>`;
+    main.innerHTML = html;
+  } catch(e) {
+    main.innerHTML = `<div class="panel"><p>Ошибка загрузки админки</p></div>`;
+  }
+}
+
+window.editUser = async function(id) {
+  const newName = prompt('Новое имя (оставьте пустым для пропуска)');
+  const newPass = prompt('Новый пароль (мин. 6 символов, оставьте пустым для пропуска)');
+  const body = {};
+  if (newName && newName.trim()) body.username = newName.trim();
+  if (newPass && newPass.length >= 6) body.password = newPass;
+  if (Object.keys(body).length === 0) return;
+  try {
+    await fetchAPI(`/api/admin/users/${id}`, { method: 'PUT', body });
+    showAdminPanel();
+  } catch(e) { alert(e.message); }
+};
+
+window.deleteUser = async function(id) {
+  if (!confirm('Удалить пользователя?')) return;
+  try {
+    await fetchAPI(`/api/admin/users/${id}`, { method: 'DELETE' });
+    showAdminPanel();
+  } catch(e) { alert(e.message); }
+};
+
+window.showStyleEditor = async function() {
+  const styles = await fetchAPI('/api/admin/styles');
+  openModal(`
+    <h3>Редактор стилей</h3>
+    <form id="styleForm">
+      <div class="form-group">
+        <label>Основной цвет (hex)</label>
+        <input type="text" id="stylePrimary" value="${styles.primary || '#1877f2'}">
+      </div>
+      <div class="form-group">
+        <label>Фон (hex)</label>
+        <input type="text" id="styleSecondary" value="${styles.secondary || '#f0f2f5'}">
+      </div>
+      <button type="submit" class="btn">Применить</button>
+    </form>
+    <p id="styleMsg" style="color:red; margin-top:8px;"></p>
+  `);
+  document.getElementById('styleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const style = {
+      primary: document.getElementById('stylePrimary').value.trim(),
+      secondary: document.getElementById('styleSecondary').value.trim()
+    };
+    try {
+      await fetchAPI('/api/admin/styles', { method: 'PUT', body: { style } });
+      closeModal();
+      showAdminPanel();
+      // Применяем стиль на лету
+      document.documentElement.style.setProperty('--primary', style.primary);
+      document.documentElement.style.setProperty('--secondary', style.secondary);
+    } catch(e) {
+      document.getElementById('styleMsg').textContent = e.message;
+    }
+  });
+};
+
+// ========== УВЕДОМЛЕНИЯ ==========
+async function loadNotifications() {
+  if (!currentUser) return;
+  try {
+    const notifs = await fetchAPI('/api/notifications');
+    const unread = notifs.filter(n => !n.read).length;
+    document.getElementById('notifBadge').textContent = unread;
+    let html = '';
+    if (notifs.length === 0) html = `<div class="notif-item">Нет уведомлений</div>`;
+    else {
+      notifs.slice(0, 10).forEach(n => {
+        html += `<div class="notif-item ${n.read ? '' : 'unread'}" data-id="${n.id}" data-link="${n.link || '#'}">
+          ${n.message} <span class="time">${new Date(n.createdAt).toLocaleString()}</span>
+        </div>`;
+      });
+    }
+    notifDropdown.innerHTML = html;
+    notifDropdown.querySelectorAll('.notif-item').forEach(el => {
+      el.addEventListener('click', async () => {
+        const id = el.dataset.id;
+        if (id) await fetchAPI(`/api/notifications/${id}`, { method: 'PUT' });
+        const link = el.dataset.link;
+        if (link && link !== '#') {
+          // Простой переход по ссылке (можно обработать через navigate)
+          if (link.startsWith('/thread/')) {
+            const threadId = link.split('/').pop();
+            navigate('thread', threadId);
+          } else if (link === '/messages') {
+            navigate('messages');
+          }
+        }
+        loadNotifications();
+        notifDropdown.classList.remove('show');
+      });
+    });
+  } catch(e) {}
+}
+function toggleNotifications() { notifDropdown.classList.toggle('show'); }
+
+// ========== ОСТАЛЬНЫЕ СТРАНИЦЫ (профиль, сообщения, поиск) ==========
+// (аналогичны предыдущей версии – можно оставить без изменений)
+
+// ========== МОДАЛЬНЫЕ ОКНА ==========
+function openModal(html) {
+  modalBody.innerHTML = html;
+  modalOverlay.classList.add('show');
+}
+function closeModal() { modalOverlay.classList.remove('show'); }
+document.getElementById('modalClose').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) closeModal();
+});
+
+// ========== АВТОРИЗАЦИЯ МОДАЛКИ ==========
+function showAuthModal(type) {
+  const isLogin = type === 'login';
+  openModal(`
+    <h3>${isLogin ? 'Вход' : 'Регистрация'}</h3>
+    <form id="authForm">
+      <div class="form-group">
+        <label>Имя пользователя</label>
+        <input type="text" id="authUsername" required>
+      </div>
+      <div class="form-group">
+        <label>Пароль</label>
+        <input type="password" id="authPassword" required>
+      </div>
+      ${!isLogin ? `
+        <div class="form-group">
+          <label>Повторите пароль</label>
+          <input type="password" id="authConfirm" required>
+        </div>
+      ` : ''}
+      <button type="submit" class="btn">${isLogin ? 'Войти' : 'Зарегистрироваться'}</button>
+    </form>
+    <p id="authMsg" style="color:red; margin-top:8px;"></p>
+  `);
+  document.getElementById('authForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('authUsername').value.trim();
+    const password = document.getElementById('authPassword').value;
+    const confirm = document.getElementById('authConfirm')?.value || '';
+    const endpoint = isLogin ? '/api/login' : '/api/register';
+    const body = isLogin ? { username, password } : { username, password, confirmPassword: confirm };
+    try {
+      const data = await fetchAPI(endpoint, { method: 'POST', body });
+      if (data.success) {
+        closeModal();
+        await checkAuth();
+        navigate('home');
+      } else {
+        document.getElementById('authMsg').textContent = data.error || 'Ошибка';
+      }
+    } catch(e) {
+      document.getElementById('authMsg').textContent = e.message;
+    }
+  });
+}
+
+// ========== ПОИСК ==========
+searchBtn.addEventListener('click', () => {
+  const q = searchInput.value.trim();
+  if (q) navigate('search', q);
+});
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); searchBtn.click(); }
+});
+
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+(async function init() {
+  await checkAuth();
+  await loadCategories();
+  navigate('home');
+})();
+
+</script>
+</body>
+</html>
